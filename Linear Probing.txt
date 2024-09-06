@@ -1,0 +1,182 @@
+package SecondProject;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class LinearProbing extends JPanel implements ActionListener {
+
+    private static final int SIZE = 15;
+    private static final int CIRCLE_RADIUS = 20;
+    private static final int MARGIN = 20;
+    private static final int SPACING = 10;
+    private static final Color TABLE_COLOR = new Color(230, 230, 230);
+    private static final Color BORDER_COLOR = new Color(100, 100, 100);
+    private static final Color KEY_COLOR = new Color(70, 130, 180);
+    private static final Color COLLISION_COLOR = new Color(255, 99, 71);
+    private static final int ARROW_LENGTH = 20;
+
+    private int[] hashTable;
+    private int[] keys;
+    private int currentKeyIndex;
+    private int collidedIndex;
+    private int animationCounter;
+    private int animationTargetIndex;
+
+    public LinearProbing() {
+        hashTable = new int[SIZE];
+        keys = new int[]{2, 15, 23, 17, 31, 12, 8, 4, 11, 5, 9, 6, 7, 1, 10};
+        currentKeyIndex = 0;
+        collidedIndex = -1;
+        animationCounter = 0;
+        animationTargetIndex = -1;
+
+        setPreferredSize(new Dimension(SIZE * (CIRCLE_RADIUS * 2 + SPACING) + MARGIN * 2, SIZE * CIRCLE_RADIUS + MARGIN * 2));
+
+        Timer timer = new Timer(100, this); // Increased timer interval for a slower animation
+        timer.start();
+    }
+
+    @Override
+    public void paint(Graphics g) {
+        super.paint(g);
+
+        Graphics2D g2 = (Graphics2D) g;
+
+        // Draw the hash table slots
+        g2.setColor(TABLE_COLOR);
+        g2.fillRect(MARGIN, MARGIN, SIZE * (CIRCLE_RADIUS * 2 + SPACING), SIZE * CIRCLE_RADIUS);
+
+        for (int i = 0; i < SIZE; i++) {
+            int x = MARGIN + i * (CIRCLE_RADIUS * 2 + SPACING);
+            int y = MARGIN;
+            int width = CIRCLE_RADIUS * 2;
+            int height = SIZE * CIRCLE_RADIUS;
+            g2.setColor(BORDER_COLOR);
+            g2.drawRect(x, y, width, height);
+
+            // Add labels for hash table slots
+            g2.setColor(Color.BLACK);
+            g2.setFont(new Font("Arial", Font.BOLD, 14));
+            g2.drawString(String.valueOf(i), x + CIRCLE_RADIUS, y + CIRCLE_RADIUS / 2);
+        }
+
+        // Draw the circles
+        for (int i = 0; i < SIZE; i++) {
+            int x = MARGIN + i * (CIRCLE_RADIUS * 2 + SPACING) + CIRCLE_RADIUS;
+            int y = MARGIN + (SIZE - 1 - i) * CIRCLE_RADIUS;
+
+            if (hashTable[i] != 0) {
+                if (i == collidedIndex && i == animationTargetIndex) {
+                    // Animate the collided circle
+                    x += animationCounter * (MARGIN + CIRCLE_RADIUS * 2 + SPACING);
+                }
+
+                g2.setColor(KEY_COLOR);
+                g2.fillOval(x - CIRCLE_RADIUS, y - CIRCLE_RADIUS, CIRCLE_RADIUS * 2, CIRCLE_RADIUS * 2);
+
+                // Add labels for inserted keys
+                g2.setColor(Color.BLACK);
+                g2.setFont(new Font("Arial", Font.BOLD, 14));
+                g2.drawString(String.valueOf(hashTable[i]), x, y + CIRCLE_RADIUS / 2);
+            }
+        }
+
+        // Draw the current key
+        if (currentKeyIndex < keys.length) {
+            int key = keys[currentKeyIndex];
+            int index = hashFunction(key, SIZE);
+
+            int x = MARGIN + index * (CIRCLE_RADIUS * 2 + SPACING) + CIRCLE_RADIUS;
+            int y = MARGIN + (SIZE - 1 - index) * CIRCLE_RADIUS;
+
+            g2.setColor(Color.BLUE);
+            g2.fillOval(x - CIRCLE_RADIUS, y - CIRCLE_RADIUS, CIRCLE_RADIUS * 2, CIRCLE_RADIUS * 2);
+
+            // Add label for current key
+            g2.setColor(Color.BLACK);
+            g2.setFont(new Font("Arial", Font.BOLD, 14));
+            g2.drawString(String.valueOf(key), x, y + CIRCLE_RADIUS / 2);
+        }
+
+        // Draw arrows
+        if (collidedIndex != -1 && animationCounter > 0 && animationTargetIndex != -1) {
+            drawArrow(g2, collidedIndex, animationTargetIndex, animationCounter);
+        }
+    }
+
+    private int hashFunction(int key, int size) {
+        return key % size;
+    }
+
+    private void drawArrow(Graphics2D g2, int fromIndex, int toIndex, int counter) {
+        int fromX = MARGIN + fromIndex * (CIRCLE_RADIUS * 2 + SPACING) + CIRCLE_RADIUS;
+        int fromY = MARGIN + (SIZE - 1 - fromIndex) * CIRCLE_RADIUS;
+
+        int toX = MARGIN + toIndex * (CIRCLE_RADIUS * 2 + SPACING) + CIRCLE_RADIUS;
+        int toY = MARGIN + (SIZE - 1 - toIndex) * CIRCLE_RADIUS;
+
+        // Calculate arrow position during animation
+        double progress = (double) counter / SIZE;
+        int arrowX = (int) (fromX + progress * (toX - fromX));
+        int arrowY = (int) (fromY + progress * (toY - fromY));
+
+        g2.setColor(COLLISION_COLOR);
+        g2.setStroke(new BasicStroke(2));
+        g2.drawLine(fromX, fromY, arrowX, arrowY);
+
+        // Draw arrowhead
+        drawArrowhead(g2, arrowX, arrowY, Math.atan2(toY - fromY, toX - fromX));
+    }
+
+    private void drawArrowhead(Graphics2D g2, int x, int y, double angle) {
+        int arrowSize = 8;
+        int x1 = (int) (x - arrowSize * Math.cos(angle - Math.PI / 6));
+        int y1 = (int) (y - arrowSize * Math.sin(angle - Math.PI / 6));
+        int x2 = (int) (x - arrowSize * Math.cos(angle + Math.PI / 6));
+        int y2 = (int) (y - arrowSize * Math.sin(angle + Math.PI / 6));
+
+        g2.drawLine(x, y, x1, y1);
+        g2.drawLine(x, y, x2, y2);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (currentKeyIndex < keys.length) {
+            int key = keys[currentKeyIndex];
+            int index = hashFunction(key, SIZE);
+
+            while (hashTable[index] != 0) {
+                collidedIndex = index;
+                index = (index + 1) % SIZE;
+            }
+
+            // Start animation if there is a collision
+            if (collidedIndex != -1 && animationCounter <= SIZE) {
+                animationTargetIndex = index;
+                animationCounter++;
+            } else {
+                hashTable[index] = key;
+                currentKeyIndex++;
+                collidedIndex = -1;
+                animationCounter = 0;
+                animationTargetIndex = -1;
+            }
+
+            repaint();
+        }
+    }
+
+    public static void main(String[] args) {
+        // Create the linear probing visualizer
+        LinearProbing visualizer = new LinearProbing();
+
+        // Create a frame to hold the visualizer panel
+        JFrame frame = new JFrame("Linear Probing Visualizer");
+        frame.add(visualizer);
+        frame.pack();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+    }
+}
